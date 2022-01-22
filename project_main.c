@@ -24,12 +24,31 @@ uint8_t minute = 0;
 uint8_t hour = 0;
 char display[7];
 
+void Show_segment();
+void Reset_show_segment();
+uint32_t arrtime[4] = {0, 0, 0, 0};
+
+uint8_t i;
+
+uint32_t seg[11] = {LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14,	//0
+										LL_GPIO_PIN_10 | LL_GPIO_PIN_11,	//1
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_15,	//2
+									  LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_15,	//3
+										LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//4
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//5
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//6
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11,	//7
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//8
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//9 
+										LL_GPIO_PIN_4}; //L1,L2
+	
+uint32_t digit[4] = {LL_GPIO_PIN_0,LL_GPIO_PIN_1, LL_GPIO_PIN_2, LL_GPIO_PIN_3};
+
 int main()
 {	
 	SystemClock_Config();
 	GPIO_Configuretion();
 	TIMBase_Config();
-	LCD_GLASS_Init();
 
 	while(1)
 	{
@@ -42,37 +61,33 @@ int main()
 			{
 				second = second%60;
 				minute++;
-				if (minute == 2)
+				if (minute == 60)
 				{
-					minute = minute%2;
+					minute = minute%60;
 					hour++;
 				}
 			}
-			LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_6);
-			LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_7);
-			sprintf(display, "%d %d %d", hour, minute, second);
-			LCD_GLASS_Clear();
-			LCD_GLASS_DisplayString((uint8_t*)display);
-			
+			arrtime[3] = second%10;
+			arrtime[2] = second/10;
+			arrtime[1] = minute%10;
+			arrtime[0] = minute/10;
 		}
-//		else if(second == 60)
-//		{
-//			second = second%60;
-//			minute++;
-//			sprintf(display, "%d %d %d", hour, minute, second);
-//			LCD_GLASS_DisplayString((uint8_t*)display);
-//			
-//			LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_6);
-//		}
-//		else if(second == 60 && minute == 60)
-//		{
-//			second = second%60;
-//			minute = minute%60;
-//			hour++;
-//			sprintf(display, "%d %d %d", hour, minute, second);
-//			LCD_GLASS_DisplayString((uint8_t*)display);
-//			LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_7);
-//		}
+		Show_segment(arrtime);
+	}
+}
+
+void Reset_show_segment()
+{
+	LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3);
+	LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15);
+}
+
+void Show_segment(time){
+	for(i=0	; i<4; i++)
+	{
+		Reset_show_segment();
+		LL_GPIO_SetOutputPin(GPIOB, seg[arrtime[i]]);
+		LL_GPIO_SetOutputPin(GPIOC, digit[i]);
 	}
 }
 
@@ -103,17 +118,32 @@ void TIMBase_Config(void)
 
 void GPIO_Configuretion (void)
 {
-	LL_GPIO_InitTypeDef gpio_conf;
+//	LL_GPIO_InitTypeDef gpio_conf;
+//	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
+//	gpio_conf.Pin = LL_GPIO_PIN_6;
+//	gpio_conf.Mode = LL_GPIO_MODE_OUTPUT;
+//	gpio_conf.Pull = LL_GPIO_PULL_NO;
+//	gpio_conf.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+//	gpio_conf.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+//	LL_GPIO_Init(GPIOB, &gpio_conf);
+//	
+//	gpio_conf.Pin = LL_GPIO_PIN_7;
+//	LL_GPIO_Init(GPIOB, &gpio_conf);
+//	
+	LL_GPIO_InitTypeDef ltc4727_initstruct;
+	//configure ltc4727js
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-	gpio_conf.Pin = LL_GPIO_PIN_6;
-	gpio_conf.Mode = LL_GPIO_MODE_OUTPUT;
-	gpio_conf.Pull = LL_GPIO_PULL_NO;
-	gpio_conf.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	gpio_conf.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-	LL_GPIO_Init(GPIOB, &gpio_conf);
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
 	
-	gpio_conf.Pin = LL_GPIO_PIN_7;
-	LL_GPIO_Init(GPIOB, &gpio_conf);
+	ltc4727_initstruct.Mode = LL_GPIO_MODE_OUTPUT;
+	ltc4727_initstruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	ltc4727_initstruct.Pull = LL_GPIO_PULL_NO;
+	ltc4727_initstruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+	ltc4727_initstruct.Pin = LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15;
+	LL_GPIO_Init(GPIOB, &ltc4727_initstruct);
+	
+	ltc4727_initstruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3;
+	LL_GPIO_Init(GPIOC, &ltc4727_initstruct);
 	
 }
 
