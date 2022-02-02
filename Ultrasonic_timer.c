@@ -127,7 +127,7 @@ int main()
 							
 							period = (up_cycle*(PSC) * 1.0) / (TIM2CLK * 1.0); //calculate uptime period
 							distance = (period * 340) / 2; //meter unit
-							while(distance<= 0.05)
+							if(distance<= 0.05)
 							{
 							cnt = LL_TIM_GetCounter(TIM9);
 									if (cnt >= LL_TIM_GetAutoReload(TIM9))
