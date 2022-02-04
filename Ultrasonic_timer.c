@@ -10,6 +10,10 @@
 #include "stm32l1xx_ll_tim.h"
 
 void SystemClock_Config(void);
+void delay();
+	
+
+
 
 void TIMBase_Config(void)
 {
@@ -20,23 +24,24 @@ void TIMBase_Config(void)
 	LL_TIM_InitTypeDef timbase;
 	
 	/*enable clock on bus path APB1*/
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM9);
 	
 	timbase.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 	timbase.CounterMode = LL_TIM_COUNTERMODE_UP;
-	timbase.Autoreload = 8000 - 1;
-	timbase.Prescaler = 4000 - 1;
+	//10s
+	timbase.Autoreload = 1000 - 1;
+	timbase.Prescaler = 32000- 1;
 	
-	LL_TIM_Init(TIM4, &timbase);
+	LL_TIM_Init(TIM9, &timbase);
 	
 	/*Enable timer interrupt*/
-	LL_TIM_EnableIT_UPDATE(TIM4);
+	LL_TIM_EnableIT_UPDATE(TIM9);
 	
 	/*Nested vectored interrupt controller*/
-	NVIC_SetPriority(TIM4_IRQn, 0);/*set priority 0, defualt priority 35*/
-	NVIC_EnableIRQ(TIM4_IRQn);/*enable NVIC IRQ channal*/
+	NVIC_SetPriority(TIM9_IRQn, 0);/*set priority 0, defualt priority 35*/
+	NVIC_EnableIRQ(TIM9_IRQn);/*enable NVIC IRQ channal*/
 
-	LL_TIM_EnableCounter(TIM4);
+	LL_TIM_EnableCounter(TIM9);
 }
 
 void GPIO_Config(void)
@@ -61,8 +66,6 @@ void GPIO_Config(void)
 		LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_2);
 }
 
-void Time_stamp();
-
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
 uint16_t up_cycle = 0;
@@ -70,7 +73,7 @@ uint16_t up_cycle = 0;
 uint8_t state = 0;
 float period = 0;
 float distance = 0;
-
+int s = 0;
 uint32_t TIM2CLK;
 uint32_t PSC;
 uint32_t cnt = 0;
@@ -79,91 +82,96 @@ uint8_t minute = 0;
 uint8_t hour = 0;
 int main()
 {
-	SystemClock_Config();
-	GPIO_Config();
-	TIMBase_Config();
-	while(1)
-	{
-		switch(state)
-		{
-			case 0:
-				//Trigger measurement
-				LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_2);
-				LL_mDelay(1);
-				LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_2);
-				state = 1;
-			break;
-			
-			case 1:
-				if(LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_1))
-				{
-					rise_timestamp = LL_TIM_GetCounter(TIM2);
-					state = 2;
-				}
-			break;
-				
-			case 2:
-				if(LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_1) == RESET)
-				{
-					fall_timestamp = LL_TIM_GetCounter(TIM2);
-					//Calculate uptime
-					if(fall_timestamp > rise_timestamp)
-					{
-						up_cycle = fall_timestamp - rise_timestamp;
-					}
-					else if(fall_timestamp < rise_timestamp)
-					{
-						up_cycle = (LL_TIM_GetAutoReload(TIM2) - rise_timestamp) + fall_timestamp + 1; 
-					}
-					else
-					{
-						//cannot measure at this freq
-						up_cycle = 0;
-					}
-					
-					if(up_cycle != 0)
-					{
-						PSC = LL_TIM_GetPrescaler(TIM2) + 1;
-						TIM2CLK = SystemCoreClock / PSC;
+		SystemClock_Config();
+		GPIO_Config();
+		TIMBase_Config();
 
-						period = (up_cycle*(PSC) * 1.0) / (TIM2CLK * 1.0); //calculate uptime period
-						distance = (period * 340) / 2; //meter unit
-					}
-					if(distance <= 0.05)
-						Time_stamp(distance);
-					state = 0;
-				}
-			break;
-		}
-	}
-}
-
-void Time_stamp(distance)
-{
-	while(1)
-	{
- 		cnt = LL_TIM_GetCounter(TIM4);
-		if (cnt >= LL_TIM_GetAutoReload(TIM4))
+		while(1)
 		{
-			LL_TIM_SetCounter(TIM4, 0);
-			second++;
-			if (second == 60)
+			if (s ==0)
 			{
-				second = second%60;
-				minute++;
-				if (minute == 60)
-				{
-					minute = minute%60;
-					hour++;
-				}
+			switch(state)
+			{
+				case 0:
+					//Trigger measurement
+					LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_2);
+					LL_mDelay(1);
+					LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_2);
+					state = 1;
+				break;
+				
+				case 1:
+					if(LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_1))
+					{
+						rise_timestamp = LL_TIM_GetCounter(TIM2);
+						state = 2;
+					}
+				break;
+					
+				case 2:
+					if(LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_1) == RESET)
+					{
+						fall_timestamp = LL_TIM_GetCounter(TIM2);
+						//Calculate uptime
+						if(fall_timestamp > rise_timestamp)
+						{
+							up_cycle = fall_timestamp - rise_timestamp;
+						}
+						else if(fall_timestamp < rise_timestamp)
+						{
+							up_cycle = (LL_TIM_GetAutoReload(TIM2) - rise_timestamp) + fall_timestamp + 1; 
+						}
+						else
+						{
+							//cannot measure at this freq
+							up_cycle = 0;
+						}
+						
+						if(up_cycle != 0)
+						{
+							PSC = LL_TIM_GetPrescaler(TIM2) + 1;
+							TIM2CLK = SystemCoreClock / PSC;
+							
+							period = (up_cycle*(PSC) * 1.0) / (TIM2CLK * 1.0); //calculate uptime period
+							distance = (period * 340) / 2; //meter unit
+							if(distance<= 0.05)
+							{
+							cnt = LL_TIM_GetCounter(TIM9);
+									//if (cnt >= LL_TIM_GetAutoReload(TIM9))
+									if (cnt >= 1000-5)
+									{
+										LL_TIM_SetCounter(TIM9, 0);
+										second++;
+										if (second == 60)
+										{
+											second = second%60;
+											minute++;
+											if (minute == 60)
+											{
+												minute = minute%60;
+												hour++;
+											}
+										}
+										  break;
+									}
+							}
+							else
+							{
+								if (second > 10)
+									s = 1;
+								else 
+									s = 0;
+							}
+						}
+						state = 0;
+					}
+				break;
 			}
 		}
-		if(cnt >= LL_TIM_GetAutoReload(TIM4))
-		{
-			cnt = 0;
-			break;
-		}
-	}
+			else
+				break;
+
+}
 }
 
 void SystemClock_Config(void)
@@ -219,10 +227,15 @@ void SystemClock_Config(void)
   /* Update CMSIS variable (which can be updated also through SystemCoreClockUpdate function) */
   LL_SetSystemCoreClock(32000000);
 }
-void TIM4_IRQHandler(void){
-	if(LL_TIM_IsActiveFlag_UPDATE(TIM4) == SET)/*unnecessary because */
+void TIM9_IRQHandler(void){
+	if(LL_TIM_IsActiveFlag_UPDATE(TIM9) == SET)/*unnecessary because */
 	{
-		LL_TIM_ClearFlag_UPDATE(TIM4);
+		LL_TIM_ClearFlag_UPDATE(TIM9);
 		//Once update event occure, program jump to here
 	}
+}
+void delay()
+{
+	unsigned int i = 0;
+	for (i=0; i<100; ++i);
 }
