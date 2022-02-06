@@ -66,6 +66,23 @@ void GPIO_Config(void)
 		LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_2);
 }
 
+
+void GPIO7sec_Config(void)
+{
+		LL_GPIO_InitTypeDef ltc4727_initstruct;
+	  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
+	  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+	  ltc4727_initstruct.Mode = LL_GPIO_MODE_OUTPUT;
+		ltc4727_initstruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+		ltc4727_initstruct.Pull = LL_GPIO_PULL_NO;
+		ltc4727_initstruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+		ltc4727_initstruct.Pin = LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 |  LL_GPIO_PIN_15;
+		LL_GPIO_Init(GPIOB, &ltc4727_initstruct);
+	
+		ltc4727_initstruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3;
+		LL_GPIO_Init(GPIOC, &ltc4727_initstruct);
+	
+}
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
 uint16_t up_cycle = 0;
@@ -80,12 +97,31 @@ uint32_t cnt = 0;
 uint8_t second = 0;
 uint8_t minute = 0;
 uint8_t hour = 0;
+uint8_t h1 = 0;
+uint8_t h2 = 0;
+uint8_t m1 =0 ;
+uint8_t m2 = 0 ;
 int main()
-{
+{    
 		SystemClock_Config();
+	  uint8_t  o;
+	  uint8_t check_digit = 4;
+	  uint32_t number[10] = {LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 							
+												 LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 																																									
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_13 | LL_GPIO_PIN_12, 														
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12	,																
+												 LL_GPIO_PIN_15 | LL_GPIO_PIN_14 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11,																							
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12,																
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13,								
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 ,																															
+												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15, 
+											 	 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15						
+												};
+		uint32_t digit[4] = {LL_GPIO_PIN_0 , LL_GPIO_PIN_1, LL_GPIO_PIN_2,LL_GPIO_PIN_3};
 		GPIO_Config();
+		GPIO7sec_Config();
 		TIMBase_Config();
-
+    
 		while(1)
 		{
 			if (s ==0)
@@ -171,7 +207,41 @@ int main()
 			else
 				break;
 
-}
+   }
+	 m1 = minute/10;
+	 m2 = minute%10;
+	 h1 = hour/10;
+	 h2 = hour%10;
+	 
+	 while(1){
+		
+		for (o = 0 ; o < 5 ; o++){
+			LL_GPIO_ResetOutputPin(GPIOC,LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3);
+			LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 |
+															LL_GPIO_PIN_13 | LL_GPIO_PIN_14 |  LL_GPIO_PIN_15);
+		switch (o){
+			case 0:
+				LL_GPIO_SetOutputPin(GPIOB,number[h1]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+				break;
+			case 1:
+				LL_GPIO_SetOutputPin(GPIOB,number[h2]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+			case 2:
+				LL_GPIO_SetOutputPin(GPIOB,number[m1]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+				break;
+			case 3:
+				LL_GPIO_SetOutputPin(GPIOB,number[m2]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+				break;
+			case 4:
+				LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_2|LL_GPIO_PIN_10);
+			}
+		//LL_mDelay(1000);
+		
+		}
+  }
 }
 
 void SystemClock_Config(void)
