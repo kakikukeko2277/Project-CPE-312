@@ -8,51 +8,13 @@
 #include "stm32l1xx_ll_utils.h"
 #include "stm32l1xx_ll_system.h"
 #include "stm32l1xx_ll_tim.h"
-#include "stm32l1xx_ll_usart.h"
-#include <string.h>
-#include "ESP8266_lowlevel_conf.h"
 
 void SystemClock_Config(void);
 void delay();
 	
-#define MAX_RESP_BUFFER_SIZE			200
 
-uint8_t resp[MAX_RESP_BUFFER_SIZE] = {0};
-uint8_t idx;
-char mnum[6];
-char hnum[6];
-/*----------------WIFI config------------------------------------------------------*/
-uint8_t ESP8266_SendCmd(uint8_t* cmd)
-{
-	ESP_USART_LOWLEVEL_Transmit(cmd);
-	while(1)
-	{
-		
-		(ESP_USART_LOWLEVEL_Recv(resp, idx) != 1)?(idx = (idx + 1) % MAX_RESP_BUFFER_SIZE):(idx);		
-		if(strstr((const char*)resp, "OK"))
-		{
-			return 0;
-		}
-	}
-}
-void ESP_ServerStart()
-{
-	while(1)
-	{
-		
-		(ESP_USART_LOWLEVEL_Recv(resp, idx) != 1)?(idx = (idx + 1) % MAX_RESP_BUFFER_SIZE):(idx);		
-		if(strstr((const char*)resp, "CONNECT"))
-		{
-			return;
-		}
-	}
-}
-void ESP8266_RespBufferReset(void)
-{
-	memset(resp, NULL, MAX_RESP_BUFFER_SIZE);
-	idx = 0;
-}
-/*----------------WIFI config------------------------------------------------------*/
+
+
 void TIMBase_Config(void)
 {
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
@@ -104,23 +66,6 @@ void GPIO_Config(void)
 		LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_2);
 }
 
-
-void GPIO7sec_Config(void)
-{
-		LL_GPIO_InitTypeDef ltc4727_initstruct;
-	  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-	  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-	  ltc4727_initstruct.Mode = LL_GPIO_MODE_OUTPUT;
-		ltc4727_initstruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-		ltc4727_initstruct.Pull = LL_GPIO_PULL_NO;
-		ltc4727_initstruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-		ltc4727_initstruct.Pin = LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 |  LL_GPIO_PIN_15;
-		LL_GPIO_Init(GPIOB, &ltc4727_initstruct);
-	
-		ltc4727_initstruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3;
-		LL_GPIO_Init(GPIOC, &ltc4727_initstruct);
-	
-}
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
 uint16_t up_cycle = 0;
@@ -135,31 +80,12 @@ uint32_t cnt = 0;
 uint8_t second = 0;
 uint8_t minute = 0;
 uint8_t hour = 0;
-uint8_t h1 = 0;
-uint8_t h2 = 0;
-uint8_t m1 =0 ;
-uint8_t m2 = 0 ;
 int main()
-{    
+{
 		SystemClock_Config();
-	  uint8_t  o;
-	  uint8_t check_digit = 4;
-	  uint32_t number[10] = {LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 							
-												 LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 																																									
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_13 | LL_GPIO_PIN_12, 														
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12	,																
-												 LL_GPIO_PIN_15 | LL_GPIO_PIN_14 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11,																							
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12,																
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13,								
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 ,																															
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15, 
-											 	 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15						
-												};
-		uint32_t digit[4] = {LL_GPIO_PIN_0 , LL_GPIO_PIN_1, LL_GPIO_PIN_2,LL_GPIO_PIN_3};
 		GPIO_Config();
-		GPIO7sec_Config();
 		TIMBase_Config();
-    
+
 		while(1)
 		{
 			if (s ==0)
@@ -245,72 +171,7 @@ int main()
 			else
 				break;
 
-   }
-	SystemClock_Config();
-	ESP_USART_LOWLEVEL_Conf();
-	ESP_USART_Start();
-	
-	ESP8266_SendCmd((uint8_t*)"AT+RST\r\n");
-	ESP8266_RespBufferReset();	
-	ESP8266_SendCmd((uint8_t*)"AT+RESTORE\r\n");
-	ESP8266_RespBufferReset();
-	LL_mDelay(1000); //Prevent ESP8266 flooding message
-	ESP8266_SendCmd((uint8_t*)"AT+CWMODE=1\r\n");
-	ESP8266_RespBufferReset();
-	ESP8266_SendCmd((uint8_t*)"AT+RST\r\n");
-	ESP8266_RespBufferReset();	
-	LL_mDelay(1000);
-	ESP8266_SendCmd((uint8_t*)"AT+CWJAP=\"MAPLE_2.4\",\"gentiny2718\"\r\n");
-	ESP8266_RespBufferReset();	
-	ESP8266_SendCmd((uint8_t*)"AT+CWJAP?\r\n");
-	ESP8266_RespBufferReset();	
-	LL_mDelay(1000);
-	 /*----------------CLIENT------------------------------------------------------*/
-	sprintf(hnum, "%d", hour);
-	sprintf(mnum, ":%d", minute);
-	strcat(hnum,mnum);
-	ESP8266_SendCmd((uint8_t*)"AT+CIPMUX=0\r\n");
-  ESP8266_RespBufferReset();
-  ESP8266_SendCmd((uint8_t*)"AT+CIPSTART=\"TCP\",\"192.168.1.32\",2759\r\n");
-  ESP8266_RespBufferReset();
-  	
-  ESP8266_SendCmd((uint8_t*)"AT+CIPSEND=5\r\n");
-  ESP8266_RespBufferReset();
-	ESP_USART_LOWLEVEL_Transmit((uint8_t *)hnum);
-  m1 = minute/10;
-	m2 = minute%10;
-	h1 = hour/10;
-	h2 = hour%10;
-	 
-	 while(1){
-		
-		for (o = 0 ; o < 5 ; o++){
-			LL_GPIO_ResetOutputPin(GPIOC,LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3);
-			LL_GPIO_ResetOutputPin(GPIOB,LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 |
-															LL_GPIO_PIN_13 | LL_GPIO_PIN_14 |  LL_GPIO_PIN_15);
-		switch (o){
-			case 0:
-				LL_GPIO_SetOutputPin(GPIOB,number[h1]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-				break;
-			case 1:
-				LL_GPIO_SetOutputPin(GPIOB,number[h2]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-			case 2:
-				LL_GPIO_SetOutputPin(GPIOB,number[m1]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-				break;
-			case 3:
-				LL_GPIO_SetOutputPin(GPIOB,number[m2]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-				break;
-			case 4:
-				LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_2|LL_GPIO_PIN_10);
-			}
-		//LL_mDelay(1000);
-		
-		}
-  }
+}
 }
 
 void SystemClock_Config(void)
