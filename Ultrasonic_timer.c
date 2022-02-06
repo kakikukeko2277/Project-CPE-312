@@ -8,13 +8,51 @@
 #include "stm32l1xx_ll_utils.h"
 #include "stm32l1xx_ll_system.h"
 #include "stm32l1xx_ll_tim.h"
+#include "stm32l1xx_ll_usart.h"
+#include <string.h>
+#include "ESP8266_lowlevel_conf.h"
 
 void SystemClock_Config(void);
 void delay();
 	
+#define MAX_RESP_BUFFER_SIZE			200
 
-
-
+uint8_t resp[MAX_RESP_BUFFER_SIZE] = {0};
+uint8_t idx;
+char mnum[6];
+char hnum[6];
+/*----------------WIFI config------------------------------------------------------*/
+uint8_t ESP8266_SendCmd(uint8_t* cmd)
+{
+	ESP_USART_LOWLEVEL_Transmit(cmd);
+	while(1)
+	{
+		
+		(ESP_USART_LOWLEVEL_Recv(resp, idx) != 1)?(idx = (idx + 1) % MAX_RESP_BUFFER_SIZE):(idx);		
+		if(strstr((const char*)resp, "OK"))
+		{
+			return 0;
+		}
+	}
+}
+void ESP_ServerStart()
+{
+	while(1)
+	{
+		
+		(ESP_USART_LOWLEVEL_Recv(resp, idx) != 1)?(idx = (idx + 1) % MAX_RESP_BUFFER_SIZE):(idx);		
+		if(strstr((const char*)resp, "CONNECT"))
+		{
+			return;
+		}
+	}
+}
+void ESP8266_RespBufferReset(void)
+{
+	memset(resp, NULL, MAX_RESP_BUFFER_SIZE);
+	idx = 0;
+}
+/*----------------WIFI config------------------------------------------------------*/
 void TIMBase_Config(void)
 {
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
@@ -208,10 +246,41 @@ int main()
 				break;
 
    }
-	 m1 = minute/10;
-	 m2 = minute%10;
-	 h1 = hour/10;
-	 h2 = hour%10;
+	SystemClock_Config();
+	ESP_USART_LOWLEVEL_Conf();
+	ESP_USART_Start();
+	
+	ESP8266_SendCmd((uint8_t*)"AT+RST\r\n");
+	ESP8266_RespBufferReset();	
+	ESP8266_SendCmd((uint8_t*)"AT+RESTORE\r\n");
+	ESP8266_RespBufferReset();
+	LL_mDelay(1000); //Prevent ESP8266 flooding message
+	ESP8266_SendCmd((uint8_t*)"AT+CWMODE=1\r\n");
+	ESP8266_RespBufferReset();
+	ESP8266_SendCmd((uint8_t*)"AT+RST\r\n");
+	ESP8266_RespBufferReset();	
+	LL_mDelay(1000);
+	ESP8266_SendCmd((uint8_t*)"AT+CWJAP=\"MAPLE_2.4\",\"gentiny2718\"\r\n");
+	ESP8266_RespBufferReset();	
+	ESP8266_SendCmd((uint8_t*)"AT+CWJAP?\r\n");
+	ESP8266_RespBufferReset();	
+	LL_mDelay(1000);
+	 /*----------------CLIENT------------------------------------------------------*/
+	sprintf(hnum, "%d", hour);
+	sprintf(mnum, ":%d", minute);
+	strcat(hnum,mnum);
+	ESP8266_SendCmd((uint8_t*)"AT+CIPMUX=0\r\n");
+  ESP8266_RespBufferReset();
+  ESP8266_SendCmd((uint8_t*)"AT+CIPSTART=\"TCP\",\"192.168.1.32\",2759\r\n");
+  ESP8266_RespBufferReset();
+  	
+  ESP8266_SendCmd((uint8_t*)"AT+CIPSEND=5\r\n");
+  ESP8266_RespBufferReset();
+	ESP_USART_LOWLEVEL_Transmit((uint8_t *)hnum);
+  m1 = minute/10;
+	m2 = minute%10;
+	h1 = hour/10;
+	h2 = hour%10;
 	 
 	 while(1){
 		
