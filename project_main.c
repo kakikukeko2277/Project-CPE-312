@@ -121,6 +121,11 @@ void GPIO7sec_Config(void)
 		LL_GPIO_Init(GPIOC, &ltc4727_initstruct);
 	
 }
+
+void Time_stamp();
+void Show_segment();
+void Reset_show_segment();
+
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
 uint16_t up_cycle = 0;
@@ -135,26 +140,27 @@ uint32_t cnt = 0;
 uint8_t second = 0;
 uint8_t minute = 0;
 uint8_t hour = 0;
-uint8_t h1 = 0;
-uint8_t h2 = 0;
+uint8_t s1 = 0;
+uint8_t s2 = 0;
 uint8_t m1 =0 ;
 uint8_t m2 = 0 ;
+
 int main()
 {    
 		SystemClock_Config();
 	  uint8_t  o;
 	  uint8_t check_digit = 4;
-	  uint32_t number[10] = {LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 							
-												 LL_GPIO_PIN_13 | LL_GPIO_PIN_14 , 																																									
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_13 | LL_GPIO_PIN_12, 														
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12	,																
-												 LL_GPIO_PIN_15 | LL_GPIO_PIN_14 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11,																							
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12,																
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13,								
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 ,																															
-												 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15, 
-											 	 LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15						
-												};
+	  uint32_t number[10] = { LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14,	//0
+										LL_GPIO_PIN_10 | LL_GPIO_PIN_11,	//1
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_15,	//2
+									  LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_15,	//3
+										LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//4
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//5
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//6
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11,	//7
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_13 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15,	//8
+										LL_GPIO_PIN_2 | LL_GPIO_PIN_10 | LL_GPIO_PIN_11 | LL_GPIO_PIN_12 | LL_GPIO_PIN_14 | LL_GPIO_PIN_15 //9 
+								   };
 		uint32_t digit[4] = {LL_GPIO_PIN_0 , LL_GPIO_PIN_1, LL_GPIO_PIN_2,LL_GPIO_PIN_3};
 		GPIO_Config();
 		GPIO7sec_Config();
@@ -230,8 +236,7 @@ int main()
 							if(distance<= 0.05)
 							{
 							cnt = LL_TIM_GetCounter(TIM9);
-									//if (cnt >= LL_TIM_GetAutoReload(TIM9))
-									if (cnt >= 5)
+									if (cnt >= 1000-3)
 									{
 										LL_TIM_SetCounter(TIM9, 0);
 										second++;
@@ -268,10 +273,10 @@ int main()
 	 /*----------------CLIENT------------------------------------------------------*/
 	m1 = minute/10;
 	m2 = minute%10;
-	h1 = hour/10;
-	h2 = hour%10;
-	sprintf(hnum, "%d%d", h1,h2);
-	sprintf(mnum, ":%d%d", m1,m2);
+	s1 = second/10;
+	s2 = second%10;
+	sprintf(hnum, "%d%d", m1,m2);
+	sprintf(mnum, ":%d%d", s1,s2);
 	strcat(hnum,mnum);
 	ESP8266_SendCmd((uint8_t*)"AT+CIPMUX=0\r\n");
   ESP8266_RespBufferReset();
@@ -281,9 +286,8 @@ int main()
   ESP8266_SendCmd((uint8_t*)"AT+CIPSEND=5\r\n");
   ESP8266_RespBufferReset();
 	ESP_USART_LOWLEVEL_Transmit((uint8_t *)hnum);
-  
-	 
-	 while(1){
+	
+		while(1){
 		
 		for (o = 0 ; o < 5 ; o++){
 			LL_GPIO_ResetOutputPin(GPIOC,LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3);
@@ -291,28 +295,28 @@ int main()
 															LL_GPIO_PIN_13 | LL_GPIO_PIN_14 |  LL_GPIO_PIN_15);
 		switch (o){
 			case 0:
-				LL_GPIO_SetOutputPin(GPIOB,number[h1]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-				break;
-			case 1:
-				LL_GPIO_SetOutputPin(GPIOB,number[h2]);
-				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
-			case 2:
 				LL_GPIO_SetOutputPin(GPIOB,number[m1]);
 				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
 				break;
-			case 3:
+			case 1:
 				LL_GPIO_SetOutputPin(GPIOB,number[m2]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+			case 2:
+				LL_GPIO_SetOutputPin(GPIOB,number[s1]);
+				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
+				break;
+			case 3:
+				LL_GPIO_SetOutputPin(GPIOB,number[s2]);
 				LL_GPIO_SetOutputPin(GPIOC,digit[o]);
 				break;
 			case 4:
 				LL_GPIO_SetOutputPin(GPIOB,LL_GPIO_PIN_2|LL_GPIO_PIN_10);
 			}
 		//LL_mDelay(1000);
-		
-		}
-  }
 }
+}
+}
+
 
 void SystemClock_Config(void)
 {
