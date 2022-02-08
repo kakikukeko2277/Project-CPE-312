@@ -1,1 +1,2 @@
 โฟลเดอร์นี้เป็นโฟล์เดอร์รวม header file กับ .c ของตัว #include driver ที่จำเป็น
+ซึ่งใน stm32l1xx_ll_usart.h มีการเปลียน pin และ usart 
